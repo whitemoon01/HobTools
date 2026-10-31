@@ -790,6 +790,7 @@ static void tick(void) {
     }
 }
 
+#ifdef HOBTOOLS_LANGUAGES   /* not part of 0.9: writes the game language into HobTools.ini for Hob Keybinds */
 /* Hob Keybinds shows itself in the game's language: keep LANGUAGE=<game language> in HobTools.ini */
 __declspec(dllimport) long WINAPI SHGetFolderPathW(HANDLE, int, HANDLE, u32, u16*);
 __declspec(dllimport) HANDLE WINAPI CreateFileW(const u16*, u32, u32, void*, u32, u32, HANDLE);
@@ -817,6 +818,7 @@ static void ini_lang_sync(void) {
     h = CreateFileW(path, 0x40000000, 0, 0, 2, 0x80, 0); if (h == (HANDLE)-1) return;
     WriteFile(h, out, o, &w, 0); CloseHandle(h); logs("HobTools.ini: language "); logs(g_iniLang); logs("\r\n");
 }
+#endif
 static char TC hk_fireStarted(void* root) {
     tick();
 #ifdef HOBTOOLS_LANGUAGES

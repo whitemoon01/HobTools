@@ -1,0 +1,23 @@
+LIBRARY kernel32.dll
+EXPORTS
+GetModuleHandleW@4
+ExitProcess@4
+CreateFileW@28
+ReadFile@20
+WriteFile@20
+GetFileSize@8
+CloseHandle@4
+GetProcessHeap@0
+HeapAlloc@12
+HeapFree@12
+CreateToolhelp32Snapshot@8
+Process32FirstW@8
+Process32NextW@8
+FindFirstFileW@8
+FindNextFileW@8
+FindClose@4
+CopyFileW@12
+GetFileAttributesW@4
+GetTickCount@0
+GetModuleFileNameW@12
+MultiByteToWideChar@24

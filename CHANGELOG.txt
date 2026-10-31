@@ -1,0 +1,23 @@
+HobTools changelog
+==================
+0.9 beta  (2026-10-31)
+  First public beta.
+  * Noclip, free camera, teleport-to-camera, camera follow (Hob follows the camera across the
+    map at his own height, so leaving free cam never counts as a fall).
+  * Developer console unlocked, readable help, click-to-paste, command history, mouse-wheel
+    scrolling, Hob frozen while typing, game UI sounds.
+  * New console look: dark see-through panel, without the old arrow and close buttons.
+  * New help: commands sorted into categories (help player, help items, ...), search with
+    help <word>, coloured and clickable. HobTools commands Noclip, FreeCam, Teleport, FollowCam
+    and FlySpeed can be typed in the console.
+  * Four crashing developer commands disabled, and ReloadPlayer (it scrambled every key
+    binding); bad number arguments no longer crash the game.
+  * GetAllUpgrades now works like buying every upgrade in the shop: it gives each upgrade you can
+    unlock at that point in the game (Ancient Garb's extra health applies immediately) and the shop
+    list stays tidy. The original command also unlocked cut and not-yet-available upgrades, which
+    broke the upgrade shop list; running the new one repairs a save that was affected.
+  * Fixes a vanilla pause-menu bug where HELP / OPTIONS stayed shifted after leaving a sub-menu
+    with the mouse.
+  * Hob Keybinds app for all game keys and the mod keys.
+  * Installer / uninstaller with HOB.exe backup. Supports the Steam (1.17.2) and Epic (1.17.3)
+    versions of Hob and finds the game automatically.

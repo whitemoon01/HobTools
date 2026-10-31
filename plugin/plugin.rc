@@ -1,0 +1,25 @@
+1 VERSIONINFO
+FILEVERSION 0,9,0,0
+PRODUCTVERSION 0,9,0,0
+FILEOS 0x40004
+FILETYPE 0x2
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "HobTools (fan mod)"
+      VALUE "FileDescription", "HobTools - noclip, free camera and developer console for Hob"
+      VALUE "InternalName", "Plugin_HobTools"
+      VALUE "OriginalFilename", "Plugin_HobTools.dll"
+      VALUE "ProductName", "HobTools"
+      VALUE "FileVersion", "0.9.0 beta"
+      VALUE "ProductVersion", "0.9.0 beta"
+      VALUE "LegalCopyright", "Unofficial fan-made mod. Not affiliated with Runic Games."
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

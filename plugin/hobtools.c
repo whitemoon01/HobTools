@@ -656,18 +656,20 @@ static int list_count(const char* name, int* found) {
     for (i = 0; i < n; i++) if (((ListFoundFn)(g_base + g_b->listFound))(sv + 8, &m, i)) k++;
     *found = k; return n; }
 static void TC cmd_collectibles(void* self, void* args) {
-    static const struct { const char* list; const char* label; } L[] = {
-        { "HEALTH", "Health pieces" }, { "STAMINA", "Energy pieces" }, { "SWORDPIECES", "Sword pieces" },
-        { "BUTTERFLIES", "Butterflies" }, { "SPRITES", "Sprites" }, { "VISTAS", "Vistas" },
-        { "CORES_FOUND", "Power cores found" }, { "CORES_SOCKETED", "Power cores placed" }, { "WORLD_PIECE_FOUND", "World pieces" } };
+    static const struct { const char* list; const char* label; const char* ach; } L[] = {   /* ach = Steam achievement for finishing it */
+        { "HEALTH", "Health pieces", "Floral Collector" }, { "STAMINA", "Energy pieces", "Core Collector" },
+        { "SWORDPIECES", "Sword pieces", "Master Key" }, { "BUTTERFLIES", "Butterflies", "Rogue Beauty" },
+        { "SPRITES", "Sprites rescued", "Return Home" }, { "VISTAS", "Vistas discovered", "World Explorer" },
+        { "CORES_FOUND", "Power cores found", 0 }, { "CORES_SOCKETED", "Power cores placed", 0 }, { "WORLD_PIECE_FOUND", "World pieces", 0 } };
     int i, all = 0, have = 0, shown = 0; (void)self; (void)args;
     if (!player()) { con_msg(C_MOD "Collectibles: load a game first."); return; }
     con_msg(C_HEAD "== Collectibles ==");
     for (i = 0; i < (int)(sizeof L / sizeof L[0]); i++) {
-        int f, n = list_count(L[i].list, &f); char m[120];
+        int f, n = list_count(L[i].list, &f); char m[160];
         if (n < 0) continue;
         m[0] = 0; sapp(m, sizeof m, f == n ? "^2" : C_TEXT); sapp(m, sizeof m, L[i].label); sapp(m, sizeof m, ":  ");
         sappi(m, sizeof m, f); sapp(m, sizeof m, " / "); sappi(m, sizeof m, n); if (f == n) sapp(m, sizeof m, "  - all found");
+        if (L[i].ach) { sapp(m, sizeof m, C_TEXT "   ("); sapp(m, sizeof m, L[i].ach); sapp(m, sizeof m, ")"); }
         con_msg(m); all += n; have += f; shown++;
     }
     if (!shown) { con_msg(C_MOD "Collectibles: couldn't read the game's lists in this version."); return; }

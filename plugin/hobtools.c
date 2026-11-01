@@ -106,12 +106,13 @@ typedef struct {
     u32 setUpgrade, getAllUpgrades;                     /* GetAllUpgrades fix */
     u32 shopTable, prereqMet, getSave;                  /* shop item table, prerequisite check, save data */
     u32 langMgr;                                        /* returns the language manager (mov eax,[g]; ret) */
+    u32 listMgr, listFind, listFound;                   /* collectible lists: definitions and the save's found-bits */
 } Build;
 static const Build g_builds[] = {
     { "Epic 1.17.3", 0x2b1fc0, 0x3ec050, 0x017660, 0x2cc250, 0x52b180, 0x52b3b0, 0x2e3b87c, 0x549725,
-      0x58e870, 0x58e810, 0x58e790, 0x6b5d60, 0x39abb78, 0xbf000, 0xcb000, 0x25ce000, 0x2b7d00, 0x0c6ec0, 0x467afd8, 0x2b7350, 0x495f50, 0x4ae8d0 },
+      0x58e870, 0x58e810, 0x58e790, 0x6b5d60, 0x39abb78, 0xbf000, 0xcb000, 0x25ce000, 0x2b7d00, 0x0c6ec0, 0x467afd8, 0x2b7350, 0x495f50, 0x4ae8d0, 0x45e6c0, 0x4615c0, 0x48b650 },
     { "Steam 1.17.2",    0x00a030, 0x3ec3e0, 0x017440, 0x2cb6f0, 0x52c3d0, 0x52c600, 0x2e32d2c, 0x54aa65,
-      0x58ff10, 0x58feb0, 0x58fe30, 0x6b7310, 0x39a1a18, 0xbd800, 0xca000, 0x25c5000, 0x2b7180, 0x0c5960, 0x4670e28, 0x2b67d0, 0x496720, 0x4af1b0 },
+      0x58ff10, 0x58feb0, 0x58fe30, 0x6b7310, 0x39a1a18, 0xbd800, 0xca000, 0x25c5000, 0x2b7180, 0x0c5960, 0x4670e28, 0x2b67d0, 0x496720, 0x4af1b0, 0x45ebb0, 0x461ab0, 0x48be20 },
 };
 static const Build* g_b;
 static int build_matches(const Build* b) {
@@ -523,9 +524,9 @@ static void tfmti(char* out, int cap, int id, int v) { char b[12]; int i = 11, n
 typedef struct { const char* key; int title; int blurb; const char* names; } Cat;
 static const Cat g_cats[] = {
   { "mod", T_CAT_MOD_T, T_CAT_MOD_B,
-    " noclip freecam teleport followcam flyspeed " },
+    " noclip freecam teleport followcam flyspeed collectibles " },
   { "player", T_CAT_PLAYER_T, T_CAT_PLAYER_B,
-    " god invincible healme hurt killme killenergy healthupgrade energyupgrade setplayervisible targetable reloadplayer playerinfo playersphere movetomouse warp " },
+    " god invincible healme hurt killme killenergy healthupgrade energyupgrade setplayervisible targetable playerinfo playersphere movetomouse warp " },
   { "items", T_CAT_ITEMS_T, T_CAT_ITEMS_B,
     " accessories allaccessories noglove upgradesword swordpiece wardrobe showupgrades getupgrade getallupgrades removeupgrade removeallupgrades giveitem givetoken list setlist " },
   { "world", T_CAT_WORLD_T, T_CAT_WORLD_B,
@@ -624,6 +625,55 @@ static void TC cmd_flyspeed(void* self, void* args) {
       tfmt(m + 2, sizeof m - 2, T_SPEED, num); con_msg(m); }
 }
 
+/* ---- Collectibles: the game keeps each collectible type as a named list (see its List command);
+        the save holds a found-bit per item. Count found / total for the ones players care about. ---- */
+typedef u8* (*ListMgrFn)(void);
+typedef u8* (TC *ListFindFn)(u8*, const MsStr*);
+typedef char (TC *ListFoundFn)(u8*, const MsStr*, int);
+static void ms_ref(MsStr* m, const char* c) {          /* read-only std::string view of a C string */
+    u32 n = 0; while (c[n]) n++; memset(m, 0, sizeof *m);
+    if (n < 16) { memcpy(m->u.buf, c, n + 1); m->res = 15; } else { m->u.ptr = (char*)c; m->res = n; }
+    m->size = n; }
+static int g_listOk = -1;
+static int list_ready(void) {
+    if (g_listOk < 0) {
+        u8* f = g_base + g_b->listMgr;
+        g_listOk = f[0] == 0xa1 && f[5] == 0xc3
+            && sig(g_b->listFind, "538b5c240856578db9cc000000", 13)
+            && sig(g_b->listFound, "538b5c240856578db910010400", 13);
+        logs(g_listOk ? "collectible lists found\r\n" : "collectible lists: code not recognised\r\n");
+    }
+    return g_listOk; }
+/* returns the number of items in the list (or -1 if unknown); *found receives how many are collected */
+static int list_count(const char* name, int* found) {
+    MsStr m; u8 *mgr, *def, *sv; int n, i, k = 0;
+    *found = 0; if (!list_ready()) return -1;
+    mgr = ((ListMgrFn)(g_base + g_b->listMgr))(); if (!mgr || IsBadReadPtr(mgr, 0xd0)) return -1;
+    ms_ref(&m, name);
+    def = ((ListFindFn)(g_base + g_b->listFind))(mgr, &m); if (!def || IsBadReadPtr(def, 8)) return -1;
+    n = *(int*)(def + 4); if (n <= 0 || n > 64) return -1;
+    sv = ((GetSaveFn)(g_base + g_b->getSave))(); if (!sv || IsBadReadPtr(sv, 0x40120)) return n;
+    for (i = 0; i < n; i++) if (((ListFoundFn)(g_base + g_b->listFound))(sv + 8, &m, i)) k++;
+    *found = k; return n; }
+static void TC cmd_collectibles(void* self, void* args) {
+    static const struct { const char* list; const char* label; } L[] = {
+        { "HEALTH", "Health pieces" }, { "STAMINA", "Energy pieces" }, { "SWORDPIECES", "Sword pieces" },
+        { "BUTTERFLIES", "Butterflies" }, { "SPRITES", "Sprites" }, { "VISTAS", "Vistas" },
+        { "CORES_FOUND", "Power cores found" }, { "CORES_SOCKETED", "Power cores placed" }, { "WORLD_PIECE_FOUND", "World pieces" } };
+    int i, all = 0, have = 0, shown = 0; (void)self; (void)args;
+    if (!player()) { con_msg(C_MOD "Collectibles: load a game first."); return; }
+    con_msg(C_HEAD "== Collectibles ==");
+    for (i = 0; i < (int)(sizeof L / sizeof L[0]); i++) {
+        int f, n = list_count(L[i].list, &f); char m[120];
+        if (n < 0) continue;
+        m[0] = 0; sapp(m, sizeof m, f == n ? "^2" : C_TEXT); sapp(m, sizeof m, L[i].label); sapp(m, sizeof m, ":  ");
+        sappi(m, sizeof m, f); sapp(m, sizeof m, " / "); sappi(m, sizeof m, n); if (f == n) sapp(m, sizeof m, "  - all found");
+        con_msg(m); all += n; have += f; shown++;
+    }
+    if (!shown) { con_msg(C_MOD "Collectibles: couldn't read the game's lists in this version."); return; }
+    { char m[120] = C_TEXT "Total:  "; sappi(m, sizeof m, have); sapp(m, sizeof m, " / "); sappi(m, sizeof m, all); con_msg(m); }
+}
+
 typedef struct { const char* old; const char* name; int desc; void* fn; } ModCmd;
 static const ModCmd g_modcmds[] = {
     { "Crash",         "Noclip", T_D_NOCLIP,           (void*)cmd_noclip },
@@ -631,6 +681,7 @@ static const ModCmd g_modcmds[] = {
     { "LeakTest",      "Teleport", T_D_TELEPORT,         (void*)cmd_teleport },
     { "LeakWorldTest", "FollowCam", T_D_FOLLOW,       (void*)cmd_follow },
     { "NumberTest",    "FlySpeed", T_D_FLYSPEED,           (void*)cmd_flyspeed },
+    { "ReloadPlayer",  "Collectibles", T_D_COLLECTIBLES,   (void*)cmd_collectibles },   /* ReloadPlayer scrambled key bindings */
 };
 static u8* g_modEntry[8]; static int g_modLang = L_EN;
 static void mod_descs_refresh(void) {      /* mod command descriptions follow the game language */
